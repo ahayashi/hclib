@@ -53,7 +53,7 @@ void hclib_async(generic_frame_ptr fp, void *arg, hclib_future_t **future_list,
 
 #ifndef AHAYASHI
     // todo
-    task->parent = NULL;
+    task->parent = CURRENT_WS_INTERNAL->current_task;
 #endif    
     
     if (future_list) {

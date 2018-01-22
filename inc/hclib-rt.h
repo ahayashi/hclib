@@ -40,6 +40,9 @@ struct finish_t;
 typedef struct hclib_worker_state {
         pthread_t t; // the pthread associated
         struct finish_t* current_finish;
+#ifndef AHAYASHI
+        struct hclib_task_t* current_task;
+#endif    
         struct place_t * pl; // the directly attached place
         // Path from root to worker's leaf place. Array of places.
         struct place_t ** hpt_path;

@@ -49,7 +49,7 @@ void create_trace_event(hclib_task_t *parent_task, finish_t *finish, hclib_op op
 	action->id = 0;
 	action->time = 0;
     }
-    if (op == BEGIN_TASK || op== END_TASK) {
+    if (op == BEGIN_TASK) {
 	action->arg = id;
     } else {
 	action->arg = 0;
@@ -289,6 +289,7 @@ static inline void execute_task(hclib_task_t *task) {
     LOG_DEBUG("execute_task: task=%p fp=%p\n", task, task->_fp);
 #else
     create_trace_event(task->parent, current_finish, BEGIN_TASK, task->id);
+    CURRENT_WS_INTERNAL->current_task = task;
 #endif    
     (task->_fp)(task->args);
 #ifndef AHAYASHI
@@ -730,8 +731,8 @@ void hclib_start_finish() {
 #endif
 #ifndef AHAYASHI
     finish->id = _hclib_atomic_inc_acquire(&hclib_context->nfinishes);
-    _hclib_atomic_store_release(&finish->timestamp, 0);
-    create_trace_event(0, finish, BEGIN_FINISH, 0);
+    _hclib_atomic_store_release(&finish->timestamp, -1);
+    create_trace_event(ws->current_task, finish, BEGIN_FINISH, 0);
 #endif
     check_in_finish(finish->parent); // check_in_finish performs NULL check
     
@@ -750,7 +751,11 @@ void hclib_end_finish() {
     check_out_finish(current_finish->parent); // NULL check in check_out_finish
 
 #ifndef AHAYASHI
-    create_trace_event(0, current_finish, END_FINISH, 0); 
+    if (current_finish->parent == NULL) {
+	create_trace_event(NULL, current_finish, END_FINISH, 0);
+    } else {
+	create_trace_event(CURRENT_WS_INTERNAL->current_task->parent, current_finish, END_FINISH, 0);
+    }
 #endif
 
 
