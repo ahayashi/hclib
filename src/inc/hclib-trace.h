@@ -14,22 +14,27 @@
  * limitations under the License.
  */
 
-#ifndef HCLIB_FINISH_H
-#define HCLIB_FINISH_H
+#ifndef HCLIB_TRACE_H
+#define HCLIB_TRACE_H
 
-#include "hclib-promise.h"
 #include "hclib-atomics.h"
 
-typedef struct finish_t {
-    struct finish_t* parent;
-    _Atomic int counter;
-#if HCLIB_LITECTX_STRATEGY
-    hclib_future_t ** finish_deps;
-#endif /* HCLIB_LITECTX_STRATEGY */
-#ifndef AHAYASHI    
-    int id;
-    _Atomic int timestamp;
-#endif    
-} finish_t;
+typedef enum _hclib_op {
+    INIT = 0,
+    BEGIN_FINISH = 1,
+    END_FINISH = 2,
+    BEGIN_TASK = 3,
+    END_TASK= 4    
+} hclib_op;
 
+typedef struct _hclib_action {
+    int current_task;
+    hclib_op op;
+    int id;
+    int time;
+    int arg;
+} hclib_action;
+
+static char* _hclib_action_print_op(hclib_op op);
+void _hclib_action_print_one_action(hclib_action *action);
 #endif

@@ -31,7 +31,7 @@ libhclib_la_LIBADD =
 AM_CXXFLAGS = $(HC_FLAGS_V) $(PRODUCTION_SETTINGS_FLAGS) \
 			  $(shell xml2-config --cflags)
 libhclib_la_SOURCES = hclib-runtime.c hclib-deque.c hclib-hpt.c hclib-thread-bind.c \
-					 hclib-promise.c hclib-timer.c hclib_cpp.cpp hclib.c hclib-tree.c
+					 hclib-promise.c hclib-timer.c hclib_cpp.cpp hclib.c hclib-tree.c hclib-trace.c
 
 if X86
 if OSX

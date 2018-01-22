@@ -23,6 +23,7 @@
 #include <hclib-atomics.h>
 #include <hclib-finish.h>
 #include <hclib-hpt.h>
+#include <hclib-trace.h>
 
 static double benchmark_start_time_stats = 0;
 static double user_specified_timer = 0;
@@ -33,6 +34,28 @@ hc_context *hclib_context = NULL;
 
 static char *hclib_stats = NULL;
 static int bind_threads = -1;
+
+hc_context* get_hclib_context() { return hclib_context; }
+
+void create_trace_event(hclib_task_t *parent_task, finish_t *finish, hclib_op op, int id) {
+    hclib_action *action = malloc(sizeof(hclib_action));
+    HASSERT(action);
+    action->current_task = (parent_task == NULL)? 0 : parent_task->id;
+    action->op = op;
+    if (finish) {
+	action->id = finish->id;
+	action->time = _hclib_atomic_inc_acquire(&finish->timestamp);
+    } else {
+	action->id = 0;
+	action->time = 0;
+    }
+    if (op == BEGIN_TASK || op== END_TASK) {
+	action->arg = id;
+    } else {
+	action->arg = 0;
+    }
+    _hclib_action_print_one_action(action);
+}
 
 void hclib_start_finish();
 
@@ -135,6 +158,11 @@ void hclib_global_init() {
     // Sets up the deques and worker contexts for the parsed HPT
     hc_hpt_init(hclib_context);
 
+#ifndef AHAYASHI
+    _hclib_atomic_store_release(&hclib_context->nfinishes, 0);
+    _hclib_atomic_store_release(&hclib_context->ntasks, 0);
+#endif    
+
 }
 
 void hclib_display_runtime() {
@@ -196,6 +224,10 @@ void hclib_entrypoint() {
     }
     set_current_worker(0);
 
+#ifndef AHAYASHI
+    create_trace_event(NULL, NULL, INIT, 0);
+#endif    
+    
     // allocate root finish
     hclib_start_finish();
 }
@@ -252,10 +284,16 @@ static inline void execute_task(hclib_task_t *task) {
      * executing task are registered on the same finish.
      */
     CURRENT_WS_INTERNAL->current_finish = current_finish;
-
+#ifdef AHAYASHI
     // task->_fp is of type 'void (*generic_frame_ptr)(void*)'
     LOG_DEBUG("execute_task: task=%p fp=%p\n", task, task->_fp);
+#else
+    create_trace_event(task->parent, current_finish, BEGIN_TASK, task->id);
+#endif    
     (task->_fp)(task->args);
+#ifndef AHAYASHI
+    create_trace_event(task->parent, current_finish, END_TASK, task->id);
+#endif        
     check_out_finish(current_finish);
     free(task);
 }
@@ -690,9 +728,16 @@ void hclib_start_finish() {
 #if HCLIB_LITECTX_STRATEGY
     finish->finish_deps = NULL;
 #endif
+#ifndef AHAYASHI
+    finish->id = _hclib_atomic_inc_acquire(&hclib_context->nfinishes);
+    _hclib_atomic_store_release(&finish->timestamp, 0);
+    create_trace_event(0, finish, BEGIN_FINISH, 0);
+#endif
     check_in_finish(finish->parent); // check_in_finish performs NULL check
+    
     ws->current_finish = finish;
     _hclib_atomic_store_release(&finish->counter, 1);
+
 }
 
 void hclib_end_finish() {
@@ -703,6 +748,11 @@ void hclib_end_finish() {
     HASSERT(_hclib_atomic_load_relaxed(&current_finish->counter) == 0);
 
     check_out_finish(current_finish->parent); // NULL check in check_out_finish
+
+#ifndef AHAYASHI
+    create_trace_event(0, current_finish, END_FINISH, 0); 
+#endif
+
 
     // Don't reuse worker-state! (we might not be on the same worker anymore)
     CURRENT_WS_INTERNAL->current_finish = current_finish->parent;

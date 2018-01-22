@@ -18,14 +18,18 @@
 
 #include "hclib.h"
 #include "hclib-rt.h"
+#include "hclib-internal.h"
 #include "hclib-task.h"
 #include "hclib-async-struct.h"
 #include "hclib-finish.h"
+#include "hclib-trace.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+extern hc_context* get_hclib_context();
+    
 /*** START ASYNC IMPLEMENTATION ***/
 
 void hclib_async(generic_frame_ptr fp, void *arg, hclib_future_t **future_list,
@@ -40,12 +44,18 @@ void hclib_async(generic_frame_ptr fp, void *arg, hclib_future_t **future_list,
         .args = arg,
         .future_list = future_list,
         .place = place,
+	.id = _hclib_atomic_inc_acquire(&get_hclib_context()->ntasks)
         // any field not explicitly initialized gets zeroed
         // but not next_waiter since it's a flexible array,
         // but that's OK since it isn't read until after written
         // NOTE: .current_finish is set in "spawn_handler"
     };
 
+#ifndef AHAYASHI
+    // todo
+    task->parent = NULL;
+#endif    
+    
     if (future_list) {
 
         if (place) {

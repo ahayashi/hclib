@@ -22,6 +22,7 @@
 #include "hclib_config.h"
 #include "hclib-tree.h"
 #include "hclib-deque.h"
+#include  "hclib-trace.h"
 #include "hclib.h"
 #include "litectx.h"
 
@@ -32,7 +33,8 @@
 #define LOG_LEVEL_TRACE         5
 
 /* set the current log level */
-#define LOG_LEVEL LOG_LEVEL_FATAL
+//#define LOG_LEVEL LOG_LEVEL_FATAL
+#define LOG_LEVEL LOG_LEVEL_WARN
 
 #define WHEREARG __FILE__,__LINE__
 
@@ -83,6 +85,10 @@ typedef struct hc_context {
     /* a simple implementation of wait/wakeup condition */
     volatile int workers_wait_cond;
     worker_done_t *done_flags;
+#ifndef AHAYASHI
+    volatile int nfinishes;
+    volatile int ntasks;
+#endif    
 } hc_context;
 
 #include "hclib-finish.h"

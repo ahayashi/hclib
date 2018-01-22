@@ -46,6 +46,10 @@ typedef struct hclib_task_t {
     hclib_future_t **future_list; // Null terminated list
     place_t *place;
     struct hclib_task_t *next_waiter;
+#ifndef AHAYASHI    
+    int id;
+    struct hclib_task_t *parent;
+#endif    
 } hclib_task_t;
 
 /** @struct loop_domain_t
