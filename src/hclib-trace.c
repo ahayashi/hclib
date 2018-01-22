@@ -40,11 +40,11 @@ static char* _hclib_action_print_op(hclib_op op) {
 
 void _hclib_action_print_one_action(hclib_action *action) {
     if (action->op == INIT) {
-	fprintf(stdout, "{'task': %d,'type': 'finish', 'id': %d, 'time': %d, 'op': '%s', 'args': []}\n", 0, 0, 0, _hclib_action_print_op(action->op));
+	fprintf(stdout, "{\"task\": %d,\"type\": \"finish\", \"id\": %d, \"time\": %d, \"op\": \"%s\", \"args\": []}\n", 0, 0, 0, _hclib_action_print_op(action->op));
     } else {
 	char buf[16];
 	sprintf(buf, "%d", action->arg);
-	fprintf(stdout, "{'task': %d, 'type': 'finish', 'id': %d, 'time': %d, 'op': '%s', 'args': [%s]}\n",
+	fprintf(stdout, "{\"task\": %d, \"type\": \"finish\", \"id\": %d, \"time\": %d, \"op\": \"%s\", \"args\": [%s]}\n",
 		action->current_task,
 		action->id,
 		action->time,
