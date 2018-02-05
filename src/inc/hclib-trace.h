@@ -24,7 +24,8 @@ typedef enum _hclib_op {
     BEGIN_FINISH = 1,
     END_FINISH = 2,
     BEGIN_TASK = 3,
-    END_TASK= 4    
+    END_TASK= 4,
+    END_INIT_TASK = 5
 } hclib_op;
 
 typedef struct _hclib_action {

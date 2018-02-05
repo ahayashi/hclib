@@ -31,6 +31,7 @@ static char* _hclib_action_print_op(hclib_op op) {
 	return "BEGIN_TASK";
 	break;
     case END_TASK:
+    case END_INIT_TASK:
 	return "END_TASK";
 	break;
     default:
@@ -41,6 +42,8 @@ static char* _hclib_action_print_op(hclib_op op) {
 void _hclib_action_print_one_action(hclib_action *action) {
     if (action->op == INIT) {
 	fprintf(stdout, "{\"task\": %d,\"type\": \"finish\", \"id\": %d, \"time\": %d, \"op\": \"%s\", \"args\": []}\n", 0, 0, 0, _hclib_action_print_op(action->op));
+    } else if (action->op == END_INIT_TASK) {
+	fprintf(stdout, "{\"task\": %d,\"type\": \"finish\", \"id\": %d, \"time\": %d, \"op\": \"%s\", \"args\": []}\n", 0, 0, 1, _hclib_action_print_op(action->op));
     } else {
 	char buf[16];
 	sprintf(buf, "%d", action->arg);

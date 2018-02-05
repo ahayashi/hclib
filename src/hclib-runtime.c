@@ -37,22 +37,31 @@ static int bind_threads = -1;
 
 hc_context* get_hclib_context() { return hclib_context; }
 
-void create_trace_event(hclib_task_t *parent_task, finish_t *finish, hclib_op op, int id) {
+void create_trace_event(hclib_task_t *task, finish_t *finish, hclib_op op, int id) {
     hclib_action *action = malloc(sizeof(hclib_action));
     HASSERT(action);
-    action->current_task = (parent_task == NULL)? 0 : parent_task->id;
+    // current_task : the id of task performing this action
+    action->current_task = (task == NULL)? 0 : task->id;
     action->op = op;
+    action->arg = 0;
+
     if (finish) {
 	action->id = finish->id;
 	action->time = _hclib_atomic_inc_acquire(&finish->timestamp);
     } else {
+	// assuming the current finish is the inital finish
+	// (TODO: consider escaping task)
 	action->id = 0;
 	action->time = 0;
     }
-    if (op == BEGIN_TASK) {
+
+    switch (op) {
+    case BEGIN_TASK:
+	// id is the id of spawned task
 	action->arg = id;
-    } else {
-	action->arg = 0;
+	break;
+    default:
+	break;
     }
     _hclib_action_print_one_action(action);
 }
@@ -139,6 +148,9 @@ void hclib_global_init() {
         hclib_worker_state *ws = hclib_context->workers[i];
         ws->context = hclib_context;
         ws->current_finish = NULL;
+#ifndef AHAYASHI
+	ws->current_task = NULL;
+#endif	
         ws->curr_ctx = NULL;
         ws->root_ctx = NULL;
     }
@@ -289,11 +301,15 @@ static inline void execute_task(hclib_task_t *task) {
     LOG_DEBUG("execute_task: task=%p fp=%p\n", task, task->_fp);
 #else
     create_trace_event(task->parent, current_finish, BEGIN_TASK, task->id);
+    hclib_task_t *prev_task = CURRENT_WS_INTERNAL->current_task;
     CURRENT_WS_INTERNAL->current_task = task;
+    LOG_DEBUG("current task %d -> %d\n", (prev_task == NULL)? 0 : prev_task->id, (task == NULL)? 0 : task->id);
 #endif    
     (task->_fp)(task->args);
 #ifndef AHAYASHI
-    create_trace_event(task->parent, current_finish, END_TASK, task->id);
+    create_trace_event(task, current_finish, END_TASK, task->id);
+    CURRENT_WS_INTERNAL->current_task = prev_task;
+    LOG_DEBUG("current task %d -> %d\n", task->id, (prev_task == NULL)? 0 : prev_task->id);
 #endif        
     check_out_finish(current_finish);
     free(task);
@@ -431,6 +447,9 @@ void find_and_run_task(hclib_worker_state *ws) {
 #if HCLIB_LITECTX_STRATEGY
 static void _hclib_finalize_ctx(LiteCtx *ctx) {
     hclib_end_finish();
+#ifndef AHAYASHI
+    create_trace_event(NULL, NULL, END_INIT_TASK, 0);
+#endif        
     // Signal shutdown to all worker threads
     hclib_signal_join(hclib_context->nworkers);
     // Jump back to the system thread context for this worker
@@ -754,7 +773,7 @@ void hclib_end_finish() {
     if (current_finish->parent == NULL) {
 	create_trace_event(NULL, current_finish, END_FINISH, 0);
     } else {
-	create_trace_event(CURRENT_WS_INTERNAL->current_task->parent, current_finish, END_FINISH, 0);
+	create_trace_event(CURRENT_WS_INTERNAL->current_task, current_finish, END_FINISH, 0);
     }
 #endif
 
