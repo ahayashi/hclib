@@ -44,16 +44,21 @@ void hclib_async(generic_frame_ptr fp, void *arg, hclib_future_t **future_list,
         .args = arg,
         .future_list = future_list,
         .place = place,
-	.id = _hclib_atomic_inc_acquire(&get_hclib_context()->ntasks)
         // any field not explicitly initialized gets zeroed
         // but not next_waiter since it's a flexible array,
         // but that's OK since it isn't read until after written
         // NOTE: .current_finish is set in "spawn_handler"
     };
 
-#ifndef AHAYASHI
-    // todo
+#ifdef HCLIB_GENERATE_TRACE
+    // Remember that spawns the task
     task->parent = CURRENT_WS_INTERNAL->current_task;
+    if (property & ESCAPING_ASYNC) {
+	task->to_trace = 0;
+    } else {
+	task->id = _hclib_atomic_inc_acquire(&get_hclib_context()->ntasks);
+	task->to_trace = 1;
+    }
 #endif    
     
     if (future_list) {

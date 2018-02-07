@@ -85,7 +85,7 @@ typedef struct hc_context {
     /* a simple implementation of wait/wakeup condition */
     volatile int workers_wait_cond;
     worker_done_t *done_flags;
-#ifndef AHAYASHI
+#ifdef HCLIB_GENERATE_TRACE
     volatile int nfinishes;
     volatile int ntasks;
 #endif    

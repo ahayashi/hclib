@@ -148,7 +148,7 @@ void hclib_global_init() {
         hclib_worker_state *ws = hclib_context->workers[i];
         ws->context = hclib_context;
         ws->current_finish = NULL;
-#ifndef AHAYASHI
+#ifdef HCLIB_GENERATE_TRACE
 	ws->current_task = NULL;
 #endif	
         ws->curr_ctx = NULL;
@@ -170,7 +170,7 @@ void hclib_global_init() {
     // Sets up the deques and worker contexts for the parsed HPT
     hc_hpt_init(hclib_context);
 
-#ifndef AHAYASHI
+#ifdef HCLIB_GENERATE_TRACE
     _hclib_atomic_store_release(&hclib_context->nfinishes, 0);
     _hclib_atomic_store_release(&hclib_context->ntasks, 0);
 #endif    
@@ -236,7 +236,7 @@ void hclib_entrypoint() {
     }
     set_current_worker(0);
 
-#ifndef AHAYASHI
+#ifdef HCLIB_GENERATE_TRACE
     create_trace_event(NULL, NULL, INIT, 0);
 #endif    
     
@@ -296,20 +296,25 @@ static inline void execute_task(hclib_task_t *task) {
      * executing task are registered on the same finish.
      */
     CURRENT_WS_INTERNAL->current_finish = current_finish;
-#ifdef AHAYASHI
+#ifndef HCLIB_GENERATE_TRACE
     // task->_fp is of type 'void (*generic_frame_ptr)(void*)'
     LOG_DEBUG("execute_task: task=%p fp=%p\n", task, task->_fp);
 #else
-    create_trace_event(task->parent, current_finish, BEGIN_TASK, task->id);
-    hclib_task_t *prev_task = CURRENT_WS_INTERNAL->current_task;
-    CURRENT_WS_INTERNAL->current_task = task;
-    LOG_DEBUG("current task %d -> %d\n", (prev_task == NULL)? 0 : prev_task->id, (task == NULL)? 0 : task->id);
+    hclib_task_t *prev_task;
+    if (task->to_trace) {
+	create_trace_event(task->parent, current_finish, BEGIN_TASK, task->id);
+	hclib_task_t *prev_task = CURRENT_WS_INTERNAL->current_task;
+	CURRENT_WS_INTERNAL->current_task = task;
+	LOG_DEBUG("current task %d -> %d\n", (prev_task == NULL)? 0 : prev_task->id, (task == NULL)? 0 : task->id);
+    }
 #endif    
     (task->_fp)(task->args);
-#ifndef AHAYASHI
-    create_trace_event(task, current_finish, END_TASK, task->id);
-    CURRENT_WS_INTERNAL->current_task = prev_task;
-    LOG_DEBUG("current task %d -> %d\n", task->id, (prev_task == NULL)? 0 : prev_task->id);
+#ifdef HCLIB_GENERATE_TRACE
+    if (task->to_trace) {
+	create_trace_event(task, current_finish, END_TASK, task->id);
+	CURRENT_WS_INTERNAL->current_task = prev_task;
+	LOG_DEBUG("current task %d -> %d\n", task->id, (prev_task == NULL)? 0 : prev_task->id);
+    }
 #endif        
     check_out_finish(current_finish);
     free(task);
@@ -325,8 +330,13 @@ static inline void rt_schedule_async(hclib_task_t *async_task,
         deque_push_place(ws, async_task->place, async_task);
     } else {
         const int wid = get_current_worker();
+#ifdef AHAYASHI	
         LOG_DEBUG("rt_schedule_async: scheduling on worker wid=%d "
                 "hclib_context=%p\n", wid, hclib_context);
+#else
+	LOG_DEBUG("rt_schedule_async: scheduling on worker wid=%d, taskid=%d "
+		  "hclib_context=%p\n", wid, async_task->id, hclib_context);		
+#endif	
         if (!deque_push(&(hclib_context->workers[wid]->current->deque),
                         async_task)) {
             // TODO: deque is full, so execute in place
@@ -447,7 +457,7 @@ void find_and_run_task(hclib_worker_state *ws) {
 #if HCLIB_LITECTX_STRATEGY
 static void _hclib_finalize_ctx(LiteCtx *ctx) {
     hclib_end_finish();
-#ifndef AHAYASHI
+#ifdef HCLIB_GENERATE_TRACE
     create_trace_event(NULL, NULL, END_INIT_TASK, 0);
 #endif        
     // Signal shutdown to all worker threads
@@ -748,8 +758,9 @@ void hclib_start_finish() {
 #if HCLIB_LITECTX_STRATEGY
     finish->finish_deps = NULL;
 #endif
-#ifndef AHAYASHI
+#ifdef HCLIB_GENERATE_TRACE
     finish->id = _hclib_atomic_inc_acquire(&hclib_context->nfinishes);
+    finish->task = ws->current_task;
     _hclib_atomic_store_release(&finish->timestamp, -1);
     create_trace_event(ws->current_task, finish, BEGIN_FINISH, 0);
 #endif
@@ -769,11 +780,11 @@ void hclib_end_finish() {
 
     check_out_finish(current_finish->parent); // NULL check in check_out_finish
 
-#ifndef AHAYASHI
+#ifdef HCLIB_GENERATE_TRACE
     if (current_finish->parent == NULL) {
 	create_trace_event(NULL, current_finish, END_FINISH, 0);
     } else {
-	create_trace_event(CURRENT_WS_INTERNAL->current_task, current_finish, END_FINISH, 0);
+	create_trace_event(current_finish->task, current_finish, END_FINISH, 0);
     }
 #endif
 

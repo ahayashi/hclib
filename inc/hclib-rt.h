@@ -40,7 +40,7 @@ struct finish_t;
 typedef struct hclib_worker_state {
         pthread_t t; // the pthread associated
         struct finish_t* current_finish;
-#ifndef AHAYASHI
+#ifdef HCLIB_GENERATE_TRACE
         struct hclib_task_t* current_task;
 #endif    
         struct place_t * pl; // the directly attached place

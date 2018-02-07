@@ -43,4 +43,6 @@
 #define HCLIB_LITECTX_STRATEGY 1
 // #define VERBOSE 1
 
+#define HCLIB_GENERATE_TRACE 1
+
 #endif

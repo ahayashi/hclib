@@ -46,9 +46,10 @@ typedef struct hclib_task_t {
     hclib_future_t **future_list; // Null terminated list
     place_t *place;
     struct hclib_task_t *next_waiter;
-#ifndef AHAYASHI    
+#ifdef HCLIB_GENERATE_TRACE
     int id;
     struct hclib_task_t *parent;
+    int to_trace;
 #endif    
 } hclib_task_t;
 
