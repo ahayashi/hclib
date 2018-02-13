@@ -237,6 +237,19 @@ void hclib_entrypoint() {
     set_current_worker(0);
 
 #ifdef HCLIB_GENERATE_TRACE
+    const char *trace_file = getenv("HCLIB_TRACE_FILE");
+    if (trace_file == NULL) {
+	fprintf(stderr, "WARNING: Running without a provided HCLIB_TRACE_FILE, stdout is used for dumping traces\n");
+	hclib_context->trace_file = stdout;
+    } else {
+	FILE *trace_fp = fopen(trace_file, "w");
+	if (trace_fp == NULL) {
+	    fprintf(stderr, "WARNING: Unable to open HCLIB_TRACE_FILE, stdout is used for dumping traces\n");
+	    hclib_context->trace_file = stdout;
+	} else {
+	    hclib_context->trace_file = trace_fp;
+	}
+    }
     create_trace_event(NULL, NULL, INIT, 0);
 #endif    
     
@@ -263,6 +276,14 @@ void hclib_join(int nb_workers) {
 void hclib_cleanup() {
     hc_hpt_cleanup(hclib_context); /* cleanup deques (allocated by hc mm) */
     pthread_key_delete(ws_key);
+
+#ifdef HCLIB_GENERATE_TRACE
+    FILE *trace_fp = hclib_context->trace_file;
+    HASSERT(trace_fp != NULL);
+    if (trace_fp != stdout) {
+	fclose(trace_fp);
+    }
+#endif    
 
     free(hclib_context);
     free(total_steals);

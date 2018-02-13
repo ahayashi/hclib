@@ -88,6 +88,7 @@ typedef struct hc_context {
 #ifdef HCLIB_GENERATE_TRACE
     volatile int nfinishes;
     volatile int ntasks;
+    FILE *trace_file; 
 #endif    
 } hc_context;
 

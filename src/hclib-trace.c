@@ -16,6 +16,8 @@
 
 #include "hclib-internal.h"
 
+extern hc_context* get_hclib_context();
+
 static char* _hclib_action_print_op(hclib_op op) {
     switch (op) {
     case INIT:
@@ -40,14 +42,16 @@ static char* _hclib_action_print_op(hclib_op op) {
 }
 
 void _hclib_action_print_one_action(hclib_action *action) {
+    FILE *trace_fp = get_hclib_context()->trace_file;
+    HASSERT(trace_fp != NULL);
     if (action->op == INIT) {
-	fprintf(stdout, "{\"task\": %d,\"type\": \"finish\", \"id\": %d, \"time\": %d, \"op\": \"%s\", \"args\": []}\n", 0, 0, 0, _hclib_action_print_op(action->op));
+	fprintf(trace_fp, "{\"task\": %d,\"type\": \"finish\", \"id\": %d, \"time\": %d, \"op\": \"%s\", \"args\": []}\n", 0, 0, 0, _hclib_action_print_op(action->op));
     } else if (action->op == END_INIT_TASK) {
-	fprintf(stdout, "{\"task\": %d,\"type\": \"finish\", \"id\": %d, \"time\": %d, \"op\": \"%s\", \"args\": []}\n", 0, 0, 1, _hclib_action_print_op(action->op));
+	fprintf(trace_fp, "{\"task\": %d,\"type\": \"finish\", \"id\": %d, \"time\": %d, \"op\": \"%s\", \"args\": []}\n", 0, 0, 1, _hclib_action_print_op(action->op));
     } else {
 	char buf[16];
 	sprintf(buf, "%d", action->arg);
-	fprintf(stdout, "{\"task\": %d, \"type\": \"finish\", \"id\": %d, \"time\": %d, \"op\": \"%s\", \"args\": [%s]}\n",
+	fprintf(trace_fp, "{\"task\": %d, \"type\": \"finish\", \"id\": %d, \"time\": %d, \"op\": \"%s\", \"args\": [%s]}\n",
 		action->current_task,
 		action->id,
 		action->time,
