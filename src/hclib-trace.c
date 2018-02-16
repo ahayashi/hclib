@@ -15,7 +15,7 @@
  */
 
 #include "hclib-internal.h"
-
+#ifdef HCLIB_GENERATE_TRACE
 extern hc_context* get_hclib_context();
 
 static char* _hclib_action_print_op(hclib_op op) {
@@ -60,3 +60,4 @@ void _hclib_action_print_one_action(hclib_action *action) {
 	    );
     }
 }
+#endif

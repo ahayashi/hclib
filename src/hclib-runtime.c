@@ -37,6 +37,7 @@ static int bind_threads = -1;
 
 hc_context* get_hclib_context() { return hclib_context; }
 
+#ifdef HCLIB_GENERATE_TRACE
 void create_trace_event(hclib_task_t *task, finish_t *finish, hclib_op op, int id) {
     hclib_action *action = malloc(sizeof(hclib_action));
     HASSERT(action);
@@ -65,6 +66,7 @@ void create_trace_event(hclib_task_t *task, finish_t *finish, hclib_op op, int i
     }
     _hclib_action_print_one_action(action);
 }
+#endif
 
 void hclib_start_finish();
 
@@ -150,7 +152,7 @@ void hclib_global_init() {
         ws->current_finish = NULL;
 #ifdef HCLIB_GENERATE_TRACE
 	ws->current_task = NULL;
-#endif	
+#endif
         ws->curr_ctx = NULL;
         ws->root_ctx = NULL;
     }
@@ -348,7 +350,7 @@ static inline void rt_schedule_async(hclib_task_t *async_task,
         deque_push_place(ws, async_task->place, async_task);
     } else {
         const int wid = get_current_worker();
-#ifdef AHAYASHI	
+#ifndef HCLIB_GENERATE_TRACE
         LOG_DEBUG("rt_schedule_async: scheduling on worker wid=%d "
                 "hclib_context=%p\n", wid, hclib_context);
 #else
@@ -403,7 +405,9 @@ void spawn_handler(hclib_task_t *task, place_t *pl, bool escaping) {
     if (!escaping) {
         check_in_finish(ws->current_finish);
         task->current_finish = ws->current_finish;
+#ifdef HCLIB_GENERATE_TRACE
      	create_trace_event(task->parent, ws->current_finish, BEGIN_TASK, task->id);
+#endif	
         HASSERT(task->current_finish != NULL);
     } else {
         // If escaping task, don't register with current finish
