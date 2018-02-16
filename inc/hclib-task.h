@@ -49,7 +49,7 @@ typedef struct hclib_task_t {
 #ifdef HCLIB_GENERATE_TRACE
     int id;
     struct hclib_task_t *parent;
-    int to_trace;
+    int is_continuation;
 #endif    
 } hclib_task_t;
 

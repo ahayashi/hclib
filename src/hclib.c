@@ -52,13 +52,22 @@ void hclib_async(generic_frame_ptr fp, void *arg, hclib_future_t **future_list,
 
 #ifdef HCLIB_GENERATE_TRACE
     // Remember that spawns the task
-    task->parent = CURRENT_WS_INTERNAL->current_task;
     if (property & ESCAPING_ASYNC) {
-	task->to_trace = 0;
+	task->is_continuation = 1;
+	hclib_task_t *org = CURRENT_WS_INTERNAL->current_task;
+	if (org) {
+	    task->id = org->id;
+	    task->parent = org->parent;
+	} else {
+	    task->id = 0;
+	    task->parent = NULL;
+	}
     } else {
+	task->is_continuation = 0;
 	task->id = _hclib_atomic_inc_acquire(&get_hclib_context()->ntasks);
-	task->to_trace = 1;
+	task->parent = CURRENT_WS_INTERNAL->current_task;
     }
+    LOG_DEBUG("task %d spawns a new task, ID : %d (%s)\n", (CURRENT_WS_INTERNAL->current_task)? CURRENT_WS_INTERNAL->current_task->id : 0, task->id, (task->is_continuation)? "continuation" : "normal");
 #endif    
     
     if (future_list) {

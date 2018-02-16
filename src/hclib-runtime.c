@@ -322,20 +322,20 @@ static inline void execute_task(hclib_task_t *task) {
     LOG_DEBUG("execute_task: task=%p fp=%p\n", task, task->_fp);
 #else
     hclib_task_t *prev_task;
-    if (task->to_trace) {
+    if (!task->is_continuation) {
 	create_trace_event(task->parent, current_finish, BEGIN_TASK, task->id);
-	hclib_task_t *prev_task = CURRENT_WS_INTERNAL->current_task;
-	CURRENT_WS_INTERNAL->current_task = task;
-	LOG_DEBUG("current task %d -> %d\n", (prev_task == NULL)? 0 : prev_task->id, (task == NULL)? 0 : task->id);
     }
+    prev_task = CURRENT_WS_INTERNAL->current_task;
+    CURRENT_WS_INTERNAL->current_task = task;
+    LOG_DEBUG("current task %d -> %d\n", (prev_task == NULL)? 0 : prev_task->id, (task == NULL)? 0 : task->id);
 #endif    
     (task->_fp)(task->args);
 #ifdef HCLIB_GENERATE_TRACE
-    if (task->to_trace) {
+    if (!task->is_continuation) {
 	create_trace_event(task, current_finish, END_TASK, task->id);
-	CURRENT_WS_INTERNAL->current_task = prev_task;
-	LOG_DEBUG("current task %d -> %d\n", task->id, (prev_task == NULL)? 0 : prev_task->id);
     }
+    CURRENT_WS_INTERNAL->current_task = prev_task;
+    LOG_DEBUG("current task %d -> %d\n", task->id, (prev_task == NULL)? 0 : prev_task->id);
 #endif        
     check_out_finish(current_finish);
     free(task);
@@ -356,7 +356,7 @@ static inline void rt_schedule_async(hclib_task_t *async_task,
                 "hclib_context=%p\n", wid, hclib_context);
 #else
 	LOG_DEBUG("rt_schedule_async: scheduling on worker wid=%d, taskid=%d "
-		  "hclib_context=%p\n", wid, async_task->id, hclib_context);		
+		  "hclib_context=%p\n", wid, (async_task == NULL)? 0 : async_task->id, hclib_context);
 #endif	
         if (!deque_push(&(hclib_context->workers[wid]->current->deque),
                         async_task)) {
