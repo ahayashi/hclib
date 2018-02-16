@@ -322,9 +322,6 @@ static inline void execute_task(hclib_task_t *task) {
     LOG_DEBUG("execute_task: task=%p fp=%p\n", task, task->_fp);
 #else
     hclib_task_t *prev_task;
-    if (!task->is_continuation) {
-	create_trace_event(task->parent, current_finish, BEGIN_TASK, task->id);
-    }
     prev_task = CURRENT_WS_INTERNAL->current_task;
     CURRENT_WS_INTERNAL->current_task = task;
     LOG_DEBUG("current task %d -> %d\n", (prev_task == NULL)? 0 : prev_task->id, (task == NULL)? 0 : task->id);
@@ -406,6 +403,7 @@ void spawn_handler(hclib_task_t *task, place_t *pl, bool escaping) {
     if (!escaping) {
         check_in_finish(ws->current_finish);
         task->current_finish = ws->current_finish;
+     	create_trace_event(task->parent, ws->current_finish, BEGIN_TASK, task->id);
         HASSERT(task->current_finish != NULL);
     } else {
         // If escaping task, don't register with current finish
