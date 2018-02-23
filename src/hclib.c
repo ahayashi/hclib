@@ -121,6 +121,12 @@ hclib_future_t *hclib_async_future(futureFct_t fp, void *arg,
 
 #define DEBUG_FORASYNC 0
 
+void forasync_trace_helper(hclib_task_t *task) {
+    task->is_continuation = 0;
+    task->id = _hclib_atomic_inc_acquire(&get_hclib_context()->ntasks);
+    task->parent = CURRENT_WS_INTERNAL->current_task;
+}
+
 forasync1D_task_t *allocate_forasync1D_task() {
     forasync1D_task_t *forasync_task = (forasync1D_task_t *) malloc(
                                            sizeof(forasync1D_task_t));
@@ -214,8 +220,10 @@ void forasync1D_recursive(void *forasync_arg) {
         new_forasync_task->def.loop0 = new_loop0;
         // update lower-half
         forasync->loop0.high = mid;
-        // delegate scheduling to the underlying runtime
-
+#ifdef HCLIB_GENERATE_TRACE
+	forasync_trace_helper((hclib_task_t *)new_forasync_task);
+#endif
+	// delegate scheduling to the underlying runtime
         spawn((hclib_task_t *)new_forasync_task);
         //continue to work on the half task
         forasync1D_recursive(forasync_arg);
@@ -269,7 +277,10 @@ void forasync2D_recursive(void *forasync_arg) {
     }
     // recurse
     if(new_forasync_task != NULL) {
-        // delegate scheduling to the underlying runtime
+#ifdef HCLIB_GENERATE_TRACE
+	forasync_trace_helper((hclib_task_t *)new_forasync_task);
+#endif
+	// delegate scheduling to the underlying runtime
         //TODO can we make this a special async to avoid a get_current_async ?
         spawn((hclib_task_t *)new_forasync_task);
         //continue to work on the half task
@@ -344,7 +355,10 @@ void forasync3D_recursive(void *forasync_arg) {
     }
     // recurse
     if(new_forasync_task != NULL) {
-        // delegate scheduling to the underlying runtime
+#ifdef HCLIB_GENERATE_TRACE
+	forasync_trace_helper((hclib_task_t *)new_forasync_task);
+#endif
+	// delegate scheduling to the underlying runtime
         //TODO can we make this a special async to avoid a get_current_async ?
         spawn((hclib_task_t *)new_forasync_task);
         //continue to work on the half task
@@ -375,6 +389,9 @@ void forasync1D_flat(void *forasync_arg) {
         new_forasync_task->def.base.user = forasync->base.user;
         loop_domain_t new_loop0 = {low0, low0+tile0, stride0, tile0};
         new_forasync_task->def.loop0 = new_loop0;
+#ifdef HCLIB_GENERATE_TRACE
+	forasync_trace_helper((hclib_task_t *)new_forasync_task);
+#endif
         spawn((hclib_task_t *)new_forasync_task);
     }
     // handling leftover
@@ -389,6 +406,9 @@ void forasync1D_flat(void *forasync_arg) {
         new_forasync_task->def.base.user = forasync->base.user;
         loop_domain_t new_loop0 = {low0, high0, loop0.stride, loop0.tile};
         new_forasync_task->def.loop0 = new_loop0;
+#ifdef HCLIB_GENERATE_TRACE
+	forasync_trace_helper((hclib_task_t *)new_forasync_task);
+#endif
         spawn((hclib_task_t *)new_forasync_task);
     }
 }
@@ -417,6 +437,9 @@ void forasync2D_flat(void *forasync_arg) {
             new_forasync_task->def.loop0 = new_loop0;
             loop_domain_t new_loop1 = {low1, high1, loop1.stride, loop1.tile};
             new_forasync_task->def.loop1 = new_loop1;
+#ifdef HCLIB_GENERATE_TRACE
+	    forasync_trace_helper((hclib_task_t *)new_forasync_task);
+#endif
             spawn((hclib_task_t *)new_forasync_task);
         }
     }
@@ -454,6 +477,9 @@ void forasync3D_flat(void *forasync_arg) {
                 new_forasync_task->def.loop1 = new_loop1;
                 loop_domain_t new_loop2 = {low2, high2, loop2.stride, loop2.tile};
                 new_forasync_task->def.loop2 = new_loop2;
+#ifdef HCLIB_GENERATE_TRACE
+		forasync_trace_helper((hclib_task_t *)new_forasync_task);
+#endif
                 spawn((hclib_task_t *)new_forasync_task);
             }
         }
